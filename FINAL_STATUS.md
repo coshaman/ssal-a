@@ -1,8 +1,8 @@
-PUBLISHABLE_SPECIALIST_JOURNAL
+RELEASE_APPROVED_AND_PUBLISHED
 
 # Final status
 
-The counting-only theorem is verified at its stated algebraic/exact-CRT abstraction level. The previous selective-conference panel is historical; the current target is a specialist journal. All three final specialist reviewers returned `PUBLISHABLE_SPECIALIST_JOURNAL`, and the release audit is approved pending remote publication verification.
+The counting-only theorem is verified at its stated algebraic/exact-CRT abstraction level. The previous selective-conference panel is historical; the current target is a specialist journal. All three final specialist reviewers returned `PUBLISHABLE_SPECIALIST_JOURNAL`, the release audit was approved, and the package was published to the requested GitHub `main` branch. A fresh clone passed the canonical checks.
 
 ## Strongest theorem surviving verification
 

@@ -18,6 +18,6 @@ Date: 2026-09-03. This matrix audits the specialist-journal continuation against
 | Exact sampler theorem | Explicitly out of scope in manuscript and audits | NOT CLAIMED |
 | Unconditional bit/RAM theorem | Explicitly not claimed | NOT CLAIMED |
 | Three independent specialist reviewers | `research/SPECIALIST_REVIEW_PANEL.md`; all three final verdicts publishable | PASS |
-| Release approval and GitHub publication | `research/FINAL_RELEASE_AUDIT.md` begins `RELEASE_APPROVED`; publication pending push verification | APPROVED |
+| Release approval and GitHub publication | `research/FINAL_RELEASE_AUDIT.md` begins `RELEASE_APPROVED`; fresh clone of remote `main` passes 34/10 checks | PASS |
 
-Principal status: `PUBLISHABLE_SPECIALIST_JOURNAL`; release audit approved, publication pending remote verification.
+Principal status: `RELEASE_APPROVED_AND_PUBLISHED`.
