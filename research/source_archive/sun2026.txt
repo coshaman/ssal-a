@@ -1,0 +1,716 @@
+                                            Counting Unlabeled Chordal Graphs by Equivariant
+                                                              Evaporation
+                                                                                     Matthew Sun
+                                                                     Independent researcher, California, USA
+                                                                  matthewsun42@gmail.com / mattsun1@mit.edu
+
+                                                                                       June 2026
+
+
+
+
+arXiv:2607.02613v1 [cs.DM] 1 Jul 2026
+                                                                                        Abstract
+                                                 We compute the number of unlabeled chordal graphs on n vertices, both the total count
+                                             (OEIS A048193) and the connected count (OEIS A048192), extending two sequences whose
+                                             published values had remained at n = 15. The method is a Pólya–Burnside enumeration: the
+                                             number of unlabeled graphs in a class closed under relabeling is the average over Sn of the
+                                             number of labeled graphs fixed by each permutation. The technical core is the evaluation, for
+                                             an arbitrary permutation π, of the number of π-invariant labeled chordal graphs. We give a
+                                             dynamic program for this quantity that lifts the evaporation-based labeled chordal counting
+                                             of Hébert-Johnson, Lokshtanov and Vigoda to the equivariant setting. Its central structural
+                                             ingredient is a divisor-bundle decomposition: when a connected piece spans a cyclic orbit of size
+                                             c, it forms, for each divisor d | c, a d-fold bundle whose constituent is an object of the same
+                                             kind in the cyclic world of order c/d, computed by the same program recursively. We prove
+                                             the decomposition and the correctness of the resulting recurrences,
+                                                                                                      √           and we prove that the full
+                                             Burnside computation runs in sub-exponential time nO( n) . We report the new terms through
+                                             n = 20 and describe four independent validations, including exact agreement with all previously
+                                             known values of both sequences and an Euler-transform consistency check.
+
+
+                                        1    Introduction
+                                        A graph is chordal if it has no induced cycle of length at least four. Chordal graphs are a central
+                                        class in algorithmic graph theory, characterized by perfect elimination orderings and by tree de-
+                                        compositions whose width equals the clique number minus one. Two integer sequences count them
+                                        up to isomorphism:
+                                                             A048193(n) = #{chordal graphs on n nodes},
+                                                             A048192(n) = #{connected chordal graphs on n nodes},
+                                        both up to isomorphism. Their published data extended only to n = 15.
+                                            For the labeled count, Hébert-Johnson, Lokshtanov and Vigoda [1] gave a polynomial-time
+                                        dynamic program based on an evaporation process that repeatedly deletes all simplicial vertices.
+                                        Counting graphs up to isomorphism, however, is governed by Burnside’s lemma and requires count-
+                                        ing labeled chordal graphs invariant under each permutation of the vertices. Hébert-Johnson and
+                                        Lokshtanov [2] proved that counting labeled chordal graphs with a prescribed automorphism is
+                                        fixed-parameter tractable in the number of moved points µ, with a running time of O(27µ n9 ); in
+                                        the regime relevant to the Burnside sum, where µ may be as large as n, that bound is single-
+                                        exponential in n, and no exact unlabeled enumeration was carried out there.
+
+                                                                                            1
+Contributions. Building on the labeled evaporation dynamic program of [1], we give a concrete
+equivariant dynamic program for the number fix(π) of π-invariant labeled chordal graphs, and use
+it to compute A048192 and A048193 beyond the previous frontier. Our results are:
+    1. A divisor-bundle structure theorem (the Component-Orbit Decomposition, Theorem 1) de-
+       scribing how connected pieces of a π-invariant graph decompose, and reducing each equivari-
+       ant recurrence to its labeled counterpart of [1] (Section 5.3).
+    2. A correctness theorem (Theorem 3) for the assembled program, conditional only on the labeled
+       recurrences of [1].
+    3. A running-time theorem (Theorem   √ 4): the √
+                                                   entire computation of A048192(n) and A048193(n)
+       runs in sub-exponential time n O(  n) =e O(   n log n) , in contrast to the single-exponential worst
+
+       case of the general parameterized bound.
+    4. The new values through n = 20 (Section 7), with four independent validations.
+
+
+2     Preliminaries
+2.1    The Burnside reduction
+Let H be a class of graphs on a fixed vertex set that is closed under relabeling (chordality is such
+a property). The number of isomorphism classes of H-graphs on n vertices is, by the Cauchy–
+Frobenius–Burnside lemma,
+                                 1 X          X fix(λ)                   Y
+                        a(n) =       fix(π) =          ,          zλ =         imi mi !,               (1)
+                                 n!               zλ
+                                   π∈Sn          λ⊢n                     i≥1
+
+where fix(π) is the number of H-graphs invariant under π (i.e. with π ∈ Aut(G)), a quantity that
+depends only on the cycle type λ = (1m1 2m2 · · · ) of π, and zλ = n!/|{π : type λ}|. The connected
+count obeys the same identity with fix replaced by cfix, the number of connected invariant graphs,
+since Sn acts on connected labeled graphs as well. Thus everything reduces to computing fix(λ)
+and cfix(λ) for each cycle type λ.
+    Throughout, fix π ∈ SV with V the vertex set, |V | = n, and let N = lcm of the cycle lengths
+= ord(π). The orbits of π partition V ; an orbit of size c is a c-cycle, on which π acts as a single
+cycle. A part of size c in λ is such an orbit.
+
+2.2    Evaporation
+Definition 1 (Evaporation with an exception clique; [1]). A vertex v of a graph G is simplicial
+if its neighborhood NG (v) is a clique. Given a clique X ⊆ V (G), set G0 = G and, for t ≥ 1, let
+Lt be the set of simplicial vertices of Gt−1 not in X and put Gt = Gt−1 \ Lt . For chordal G this
+terminates with V (Gt ) = X; the sequence L1 , . . . , LT is the evaporation of G with exception X, G
+evaporates at time T , the evaporation time of v ∈ / X is the index t with v ∈ Lt , and LG (X) := LT
+is the last layer.
+    We write τ (v) for the evaporation time of v.
+
+
+3     The orbit-level process and its structure
+We run the evaporation process on a π-invariant chordal graph with a π-invariant exception clique.
+The following lemma is what makes an equivariant dynamic program well-defined: the process acts
+
+                                                     2
+on π-orbits, not on individual vertices.
+
+Lemma 1 (Orbit-evaporation). Let G be chordal with π ∈ Aut(G), and let the exception clique X
+be π-invariant. Then π(Lt ) = Lt and π ∈ Aut(Gt ) for every t. Consequently τ is constant on each
+π-orbit: every orbit evaporates in a single layer.
+
+Proof. For any π-invariant graph H one has NH (πv) = π(NH (v)), and π maps cliques to cliques;
+hence v is simplicial in H iff πv is. We induct on t. Base: G0 = G is π-invariant. Step: if
+π ∈ Aut(Gt−1 ) then simpliciality in Gt−1 is π-stable and X is π-invariant, so π(Lt ) = Lt ; deleting
+the π-invariant set Lt leaves π an adjacency-preserving bijection of V (Gt ), i.e. π ∈ Aut(Gt ). Since
+π(Lt ) = Lt , each π-orbit is contained in or disjoint from Lt , so τ is constant on orbits.
+
+    A connected component need not be π-invariant; rather π permutes the components. The orbit
+of a component is a bundle.
+
+Lemma 2 (Component-orbit bundle). Let G be π-invariant and K a connected component of G,
+with π-orbit B = {K, πK, . . . , π d−1 K} of size d. Then:
+  (i) d | N and Stab(K) = ⟨π d ⟩, so K is π d -invariant;
+ (ii) the d components of B are pairwise isomorphic and j π j K is π-invariant.
+                                                           S
+
+Proof. ⟨π⟩ is cyclic of order N . By orbit–stabilizer [⟨π⟩ : Stab(K)] = d, so | Stab(K)| = N/d and
+d | N . A cyclic group has a unique subgroup of each order dividing N ; the one of order N/d is ⟨π d ⟩,
+giving (i). Each π j restricts to an isomorphism K → π j K, and a union of a ⟨π⟩-orbit is π-invariant,
+giving (ii).
+
+Lemma 3 (Block decomposition). Let O be a π-orbit of size s and H = ⟨π d ⟩ for d | N . Then
+H acts on O with exactly gcd(d, s) orbits ( blocks), each of size s/ gcd(d, s). Any π d -invariant set
+meets O in a union of whole blocks.
+
+Proof. Identify O ∼= Z/sZ with π|O translation by 1, so π d |O is translation by d. The orbits of
+⟨d⟩ ≤ Z/sZ are the cosets of the subgroup generated by d, which has order s/ gcd(d, s); there are
+gcd(d, s) of them. A π d -invariant set is a union of such orbits.
+
+Lemma 4 (Recursive sub-world). With K, B, d as in Lemma 2, the component K is a connected
+chordal graph invariant under the cyclic group H = ⟨π d ⟩ of order N/d. Every π-orbit O of size s
+that K meets contributes to K a union of blocks of size s/ gcd(d, s). Moreover, if O has size c with
+d | c and is one of the orbits spanned by B, then K meets O in exactly one block, a single H-orbit
+of size c/d. Hence K is an object of the same type on a strictly smaller cycle type, and the bundle
+structure recurses, terminating at d = N in the labeled world.
+
+Proof. K is H-invariant (Lemma 2(i)) and H is cyclic, so by Lemma 3 K ∩ O is a union of blocks of
+size s/ gcd(d, s). For a spanned O with d | c we have gcd(d, c) = d, so O has exactly dSblocks, each
+of size c/d. The bundle has period d, so its d components are distinct and partition j π j K ⊇ O.
+As K ∩ O ̸= ∅ and πO = O, each translate meets O in π j (K ∩ O) ̸= ∅; these d sets are pairwise
+disjoint and cover O, and π j is a bijection, so d |K ∩ O| = |O| = c and |K ∩ O| = c/d. Since K ∩ O
+is a union of size-(c/d) blocks of total size c/d, it is exactly one block. The spanned orbit of size c
+thus becomes a sub-orbit of size c/d < c (as d > 1), so the recursion is well-founded and ends when
+d = N , where H = {id} and K is an unconstrained labeled graph.
+
+
+
+
+                                                  3
+4    The Component-Orbit Decomposition
+                                                               ⟨M ⟩
+For a cyclic world of order M and a cycle type ν, let g1 (t, x, ν) denote the number of configura-
+tions consisting of a single connected component-bundle on the new orbits ν, seeing a prescribed
+boundary, with evaporation time t (Section 5 makes the boundary parameters precise; for the
+                                                              P ⟨1⟩
+present theorem only its existence is used). The labeled count t g1 (t, 0, 1k ) = A007134(k) is the
+number of connected labeled chordal graphs on k vertices [1].
+
+Theorem 1 (Component-Orbit Decomposition). Let µ be a multiset of new orbits and d a positive
+integer dividing every size occurring in µ. The number of period-d component-bundles spanning
+exactly µ, seeing a prescribed set of boundary blocks, with evaporation time t, equals
+                                                  ⟨N/d⟩
+                                         d |µ|−1 g1       t, x′ , µ/d ,
+                                                                     
+
+
+where µ/d replaces each size s by s/d, the order-(N/d) world is that of Lemma 4, and the boundary
+x′ records, for each boundary orbit of size s, its gcd(d, s) blocks of sub-type s/ gcd(d, s). For d = 1
+the term is the equivariant count g1 (t, x, µ).
+
+Proof. By Lemma 4 a representative K of such a bundle is, with its incidences to the boundary
+blocks, a connected configuration in the order-(N/d) world on the sub-orbits µ/d (each spanned
+size-s orbit met in a single sub-orbit of size s/d) and on the boundary blocks x′ ; its evaporation
+time is t because, by Lemma 1 applied to ⟨π⟩ ⊇ ⟨π d ⟩, τ is constant on the ⟨π d ⟩-orbits that are
+the sub-vertices  of K, so the sub-world evaporation has the same layers. Conversely the map
+K 7→ j π j K sends each such sub-configuration to a period-d bundle (a disjoint union of the
+        S
+
+chordal π j K, π-invariant by Lemma 2(ii)).
+    It remains to count the bundles. Fix a distinguished spanned orbit O1 and let w1 be its least
+vertex. We exhibit a bijection
+
+          period-d bundles on µ ←→ order-(N/d) sub-configurations × {1, . . . , d} |µ|−1 .
+                                       
+
+
+    Forward map. Given a bundle B, let K be the component containing w1 (well-defined: w1
+lies in exactly one of the d blocks of O1 , hence in exactly one component, since the translates
+partition O1 by the argument of Lemma 4). Record the isomorphism type of K as an order-(N/d)
+sub-configuration, and the alignment a = (ai )i≥2 , where ai ∈ {1, . . . , d} names which block of Oi
+lies in K (each Oi contributes exactly one block to K by Lemma 4); the block of O1 in K is fixed
+to be the one containing w1 .
+    The period is exactly d. For 0 < j < d, π j K meets O1 in π j (K ∩O1 ), a block distinct from K ∩O1
+(the d blocks of O1 are permuted freely by π, as in Lemma 4); hence π j K ̸= K, so B has exactly
+d distinct components and the forward map lands in period-d bundles regardless of any abstract
+automorphism of K. This rules out the only possible source of over-collapse — a representative with
+internal periodic symmetry — because the symmetry that would matter, π j K = K, is forbidden
+by the block displacement.
+    Injectivity. The type of K and the alignment determine the vertex set and edges of K exactly
+(the alignment fixes which concrete blocks of each Oi are in K, and the type fixes the adjacencies
+among them and to the boundary blocks); K then determines B = {K, πK, . . . , π d−1 K}.
+    Surjectivity and freeness. Conversely, any sub-configuration K and alignment a ∈ {1,                 |µ|−1
+                                                                                           S . . j. , d}
+yields a bundle: place K on the blocks named by a (and the w1 -block of O1 ), set B = j π K. This
+is π-invariant (Lemma 2), chordal (disjoint union of chordal pieces), of period d (above), and spans
+µ with the prescribed block-seeing. The alignment choices are unconstrained: changing ai relabels
+
+                                                      4
+the order-(N/d) sub-orbit of K on Oi to a different block of Oi , a graph isomorphism that preserves
+connectivity and all boundary incidences (those are recorded against boundary blocks, which are
+fixed and shared by all components, hence unaffected by the new-orbit alignment). Thus the
+boundary-seeing data and the alignment are independent, and there are exactly d |µ|−1 alignments.
+    Therefore the number of bundles is d |µ|−1 times the number of order-(N/d) sub-configurations
+                                  ⟨N/d⟩
+of the prescribed type, which is g1     (t, x′ , µ/d).
+
+    Summing over admissible periods gives the count of all bundles spanning µ:
+                                                              ⟨N/d⟩
+                                                X
+                  COD(t, x, µ) = g1 (t, x, µ) +      d |µ|−1 g1     (t, x′ , µ/d),                                    (2)
+                                  | {z }
+                                                  d=1          d>1
+                                                             d|gcd(µ)
+
+where the boundary parameter x′ and the admissible boundary set are specialized to the condition
+in force (Section 5.3).
+
+
+5     The dynamic program and its correctness
+5.1   State variables and the block decomposition
+Fix the distinct orbit sizes S = (s1 < · · · < sr ) of π. All state variables are integer vectors indexed
+by S:
+                                             r
+                            x, k, z, l ∈ Z≥0   ,     z ≤ x (componentwise).
+Here xi is the number of boundary orbits of size si (their union X is a clique); ki is the number of
+new orbits of size si ; li (for the f -functions) is the number of orbits in the last evaporation layer
+LG (X); and z is an inclusion–exclusion sub-boundary, specifying — under a fixed linear order on
+the boundary orbits — a downward-closed       P sub-clique used to express “the piece reaches beyond
+z.” A vertex count is recovered as |X| = i si xi , etc. There is no separate “seeing” state variable:
+which boundary a piece sees is summed over inside the recurrences (below), exactly as in the labeled
+case, where it is the variable x′ ≤ x.
+    The one genuinely new ingredient is how a bundle interacts with the boundary. By Lemma 3,
+a period-d bundle does not see boundary orbits but boundary blocks: a boundary orbit of size si
+presents gcd(d, si ) blocks of sub-type τi := si / gcd(d, si ). We therefore define, for each d | N , the
+block profile of the boundary x as the vector indexed by the distinct sub-types {τi }:
+                               X
+                  βd (x)τ =         gcd(d, si ) xi    (number of blocks of sub-type τ ),              (3)
+                              i: τi =τ
+
+and the associated boundary generating function in formal variables {vτ },
+                       r                                                r                                  xi
+                       Y                gcd(d,si ) xi                  Y                gcd(d,si )
+           Γd (x) =          1 + v τi                    ,   Γcov
+                                                              d (x) =         1 + v τi                 −1         .   (4)
+                       i=1                                              i=1
+
+The coefficient of τ vτaτ in Γd (x) is the number of ways a bundle’s sub-component can see ex-
+                   Q
+actly aτ blocks of each sub-type; Γcov d   is the same restricted to seeing at least one block of every
+boundary orbit (“covers all of X”). The parenthetical is exact, not merely suggestive: by Lemma 3
+the quotient ⟨π⟩/⟨π d ⟩ ∼ = Z/ gcd(d, si )Z permutes the gcd(d, si ) blocks of each boundary orbit Oi
+transitively, so the full period-d bundle K ∪πK ∪· · ·∪π d−1 K is adjacent to all of Oi exactly when its
+representative K meets at least one block of Oi (the d translates sweep that block across the whole
+
+                                                             5
+orbit). Thus Γcov
+              d counts component-orbits that, taken as a whole, see all of X, even when no single
+                                                                                                 x
+                                                                                                     
+constituent component   does. These  are  the  equivariant analogues of the labeled coefficients x ′
+
+and xx , and the sub-type vector x′ = (aτ )τ is the boundary argument of the sub-world
+       
+                                                                                      Q function in
+Theorem 1. With d = 1 every block is a whole orbit (τi = si , gcd = 1) and Γ1 (x) = i (1 + vsi )xi
+reduces to choosing a sub-vector x′ ≤ x of boundary orbits, recovering the labeled situation.
+
+5.2   The counter functions
+We use the eight functions of [1, Def. 3.3], read on the orbit-level evaporation of Lemma 1 over the
+state variables above; “component” means component-bundle. Briefly, for a π-invariant chordal G
+with X a clique:
+
+        g(t, x, k, z)    every component of G \ X sees X \ [z]; evaporates in time ≤ t
+        g̃(t, x, k, z)   as g, with every component evaporating at time exactly t
+        ĝ(t, x, k, z)   as g̃, with no component seeing all of X
+        g1 (t, x, k)     as g̃, exactly one component, seeing all of X
+        g2 (t, x, k)     as g1 but ≥ 2 components, each seeing all of X
+        f (t, x, l, k)   connected; evaporates at exactly t; LG (X) = [x+1, x+l]; X ∪ LG (X) a clique
+        f˜(t, x, l, k)   as f , components of G \ (X ∪ L) evaporate at exactly t−1 (≥ 1)
+        fˆ(t, x, l, k)   as f˜, with no component of G \ (X ∪ L) seeing all of X ∪ L
+                                                                      P
+The labeled instance (π = id) is exactly [1]; there cfixlab (k) =        t g1 (t, 0, k).
+
+Theorem 2 (Labeled recurrences; [1], Lemmas 3.4–3.8). For π = id the eight functions satisfy the
+recurrences
+
+              g1 (t, x, k) = kl=1 kl f (t, x, l, k−l),
+                            P       
+
+            f (t, x, l, k) = kk′ =1 kk′ f˜(t, x, l, k ′ ) g(t−2, x+l, k−k ′ , x),
+                            P          
+
+            g(t, x, k, z) = kk′ =0 kk′ g̃(t, x, k ′ , z) g(t−1, x, k−k ′ , z),
+                            P          
+
+            g̃(t, x, k, z) = kk′ =1 xx′ =1 xx′ − xz′ kk−1                  ′ ′                ′
+                            P      P                           
+                                                              ′ −1 g1 (t, x , k ) g̃(t, x, k−k , z),
+
+
+
+together with the stated recurrences for ĝ, g2 , and f˜ (Lemma 3.8), all proved by conditioning on
+the component containing the least non-boundary vertex and recursing on the rest.
+
+5.3   From labeled to equivariant
+We lift Theorem 2 to general π; the resulting eight equivariant recurrences are written explicitly
+in Appendix A. The four recurrences that compose other functions (g1 , f, g, f˜) lift verbatim: their
+derivations partition the new vertices by structural role (membership in LG (X), evaporation time,
+or seeing-all
+             status),
+                Q ki and by Lemma 1 these roles are orbit-stable, so the per-size product of bi-
+          k
+nomials · = i · replaces the single binomial and each constituent function is its equivariant
+counterpart. The remaining recurrences condition on a single component; for them we use the
+following principle.
+
+Proposition 1 (Lift Principle). Let F ∈ {g̃, ĝ, g2 , fˆ}, defined by a condition ΦF on the components
+of G \ X (an evaporation pattern and a boundary-seeing pattern). The equivariant recurrence for
+F is the recurrence of Theorem 2 for F with the single-component count g1 (t, x′ , k ′ ) replaced by
+CODΦF (t, x′ , κ) of (2), restricted to the boundary condition of ΦF .
+
+
+
+                                                       6
+Proof. Fix the distinguished orbit o∗ of largest present size (least vertex among ties). By Lemmas 1–
+2 the components of G \ X form component-bundles and o∗ lies in a unique one, C ∗ , spanning some
+κ with κp ≥ 1 at the marked size p. Conditioning on C ∗ : the orbits joining it are counted by
+ kp −1 Q        ki                                                ∗                               ′
+                  
+ κp −1   i̸ = p κi (the marked orbit forced in, the rest free); C itself is counted by CODΦF (t, x , κ)
+by Theorem 1, with the boundary coefficient of ΦF applied per orbit for the d = 1 term and
+per block for d > 1 (Lemma 3); and G \ (X ∪ C ∗ ) is an F -configuration on the remaining orbits,
+counted by the recursive F -term. The three are independent (disjoint vertex sets) and the counts
+multiply, exactly as in the proof of Theorem 2; the only change is the substitution of COD for the
+single-component count.
+
+Proposition 2 (All from connected). Write the cycle type as k = (k1 , . . . , kr ) over the distinct
+sizes s1 < · · · < sr , let p = max{i : ki > 0}, and let BUNDLE(µ) be the number of single
+component-bundles spanning µ, namely
+                                               X
+                     BUNDLE(µ) = cfix(µ) +            d |µ|−1 cfix⟨N/d⟩ (µ/d).
+                                                            d>1, d|gcd(µ)
+
+Then                     Xh                            i
+                                 kp −1            ki
+                                     Q
+              fix(k) =           µp −1       i̸=p µi        BUNDLE(µ) fix(k − µ),     fix(0) = 1.
+                         µ≤k
+                         µp ≥1
+
+Proof. A π-invariant chordal graph is the disjoint union of its component-bundles (Lemma 2), and
+chordality is tested componentwise. Distinguish the orbit o∗ of size sp with least vertex; it lies in
+a unique bundle, spanning µ with µp ≥ 1. Among the kp orbits of size sp , o∗ is forced in and the
+other µp − 1 chosen from kp − 1; for i ̸= p the µi orbits are any of the ki . Given the orbit set,
+the bundle ranges over BUNDLE(µ) possibilities and the remainder independently over fix(k − µ).
+Summing over µ gives the identity.
+
+Theorem 3 (Correctness). Assume Theorem 2. For every cycle type λ with orbit vector k,
+                              X
+                    cfix(λ) =   g1 (t, 0, k), fix(λ) = Proposition 2,
+                                         t
+                             P                                              P
+and hence A048192(n) =           λ⊢n cfix(λ)/zλ and A048193(n) =            λ⊢n fix(λ)/zλ by (1).
+
+Proof. By Lemma 1 the orbit-level evaporation and all eight conditions are well-defined. The four
+composition recurrences lift verbatim and the four single-component recurrences hold by the Lift
+Principle (Proposition 1) with the Component-Orbit Decomposition (Theorem 1); the recursion on
+the order-(N/d) sub-worlds is well-founded (LemmaP  4) with base case π = id, where the functions
+and recurrences are those of Theorem 2. Therefore t g1 (t, 0, k) counts the connected π-invariant
+chordal graphs and Proposition 2 counts all of them.
+
+
+6    Running time
+                                                                                                    Qr
+For a cycle type λ with distinct sizes s1 < · · · < sr and multiplicities mi , write P (λ) =         i=1 (mi +1).
+
+Lemma 5. Let r = r(λ) be the number of distinct part sizes of λ. The dynamic program for λ,
+including its divisor-bundle sub-instances, runs in time
+
+                                    T (λ) ≤ nO(1) P (λ)O(1) (n + 1) O(r) .
+
+                                                               7
+Proof. States. Each function is memoized over an index t ≤ n and between one and four tuples
+(x, k, z, and l for the f -functions), each bounded coordinatewise by the multiplicities, so taking at
+most P (λ) values; there are O n P (λ)4 states per function.
+    Block generating functions. A recurrence’s bundle term builds a multivariate   P generating func-
+               ′
+tion (4) in r ≤ r block variables   Q of total degree at most the number of blocks i gcd(d, si )xi ≤ n.
+Such a polynomial has at most τ (βd (x)τ +1) ≤ (n+1)r monomials, and is assembled in (n+1)O(r)
+ring operations. (This corrects a naive nO(1) estimate: the monomial count is exponential in the
+number of distinct block sub-types.)
+    Work per state. Besides the generating function, a recurrence sums over a sub-multiset of k
+(≤ P (λ) terms; ≤ P (λ)2 for the absorption recurrence) and over divisors (at most d(c) = no(1) ≤
+n), and evaluates the sub-world g1 at each generating-function monomial (a memo lookup). All
+counts are non-negative integers bounded by the number of labeled chordal graphs on n vertices,
+     n
+≤ 2( 2 ) , hence of O(n2 ) bits, so each arithmetic operation costs poly(n). Work per state is therefore
+nO(1) P (λ)2 (n + 1)r .
+    Sub-instances. A bundle term calls a sub-instance whose multiplicity vector has P (λ′ ) ≤ P (λ)
+(the map s 7→ s/ gcd(d, s) only merges parts, and (a+1)(b+1) ≥ a+b+1) and at most r distinct
+sizes; the recursion depth is ≤ log2 n (each step Q at least halves the largest size). The number of
+distinct reachable sub-instances is at most i d(si ) ≤ 2O(r) ; charging each by the same bound
+multiplies the total by 2O(r) , which is absorbed into the (n + 1)O(r) factor (as (n + 1)O(r) ≥ 2O(r) ),
+leaving the stated form.
+                              √       √         √
+Lemma 6. max P (λ) ≤ e( 2+o(1)) n = eO( n) , and the number of distinct part sizes satisfies
+        √    λ⊢n
+r(λ) ≤ 2n.
+                                                  P              P
+Proof. The distinct sizes satisfy
+                              P    s i ≥  i,  so      i i m i ≤   Pi si mi = n. Relaxing mi ≥ 0 to the
+reals can only increase max i log(1 + mi ) subject to                i i mi ≤ n. The relaxed objective is
+concave; a Lagrange   multiplier  gives  1 +    mi  =    1/(µi)  for   i ≤ C := 1/µ √
+                                                                                    and mi = 0 beyond,
+                   P       1                        2                                         √
+and the constraint i≤C ( µ − i) ≤ n yields C /2 (1 + o(1)) ≤ n, i.e. C ≤ ( 2 + o(1)) n. Then
+P         C
+                                                                                          √          √
+  i≤C log i = C log C − log(C!) = C + O(log C) P                  P so log maxλ P (λ) ≤ ( 2 + o(1)) n.
+                                                          by Stirling,
+     √ since the si are distinct, 1 + 2 + · · · + r ≤ i si ≤ i si mi = n, whence r(r + 1)/2 ≤ n and
+Finally,
+r ≤ 2n.
+
+Theorem 4 (Sub-exponential running time).√  Computing
+                                                √         A048192(n) and A048193(n) by the equiv-
+ariant Burnside method takes time nO( n) = eO( n log n) .
+                           P
+Proof. The total time is λ⊢n T (λ) plus polynomial Burnside      bookkeeping. By Lemma 5, T (λ) ≤
+  O(1)      O(1)       O(r)                    O(1)       O(
+                                                             √
+                                                               n)
+                                                                           √
+n      P (λ)√ (n + 1)√ . By Lemma 6, P (λ) √ ≤ e                  and
+                                                                  √
+                                                                      r ≤     2n, so (n + 1)O(r) ≤
+(n + 1)O( √2n) = eO( n log n) ; hence T (λ)
+                                         P≤ e
+                                              O( n log n) = nO( n) . The number of partitions is
+                                                                              √
+p(n) = e  Θ(  n) (Hardy–Ramanujan), so λ⊢n T (λ) ≤ p(n) · maxλ T (λ) ≤ nO( n) .
+
+Remark 1. The bound is sub-exponential but not polynomial: the partitions into distinct parts,
+                                  √              √
+of which there are up to r = Θ( n), force the n in the exponent. For families with a bounded
+number of distinct part sizes, P (λ) = nO(1) and the cost is polynomial. The general parameterized
+bound O(27µ n9 ) of [2] is, for the cycle types with µ = Θ(n) that dominate the Burnside sum,
+single-exponential in n; Theorem 4 is the precise sense in which the present method is feasible
+across the full partition set.
+
+
+
+
+                                                    8
+7     Computational results
+The recurrences of Section 5 and the Burnside sum (1) were implemented and evaluated exactly in
+rational arithmetic. Table 1 lists both sequences; the entries for n ≤ 15 reproduce the previously
+published values, and n = 16 through 20 are new (n = 16–18 have been submitted to the OEIS;
+n = 19, 20 are reported here for the first time).
+    We stress that extending these sequences is not a matter of generating one more graph. The
+Burnside sum (1) requires the exact value of fix(λ) for every cycle type λ ⊢ n, and the number of
+cycle types is the partition number p(n), which grows sub-exponentially (p(15) = 176, p(20) = 627).
+The difficulty is concentrated in the cycle types with many small orbits, where direct enumeration
+is hopeless and the equivariant recurrences of Section 5 are essential; it is computing all of these
+fix(λ), not enumerating graphs, that had kept the sequences at n = 15.
+
+                       n            A048193(n) (all)    A048192(n) (connected)
+                       8                       2119                       1614
+                       9                      14524                      11911
+                      10                     126758                     109539
+                      11                    1392387                    1247691
+                      12                   19109099                   17566431
+                      13                  326005775                  305310547
+                      14                 6905776799                 6558690953
+                      15               181945055235               174688164414
+                      16          5985406996403               5796153514484
+                      17        247178491630853             241003010628949
+                      18      12895963060540295           12642592677074970
+                      19     855912598965399807          842762851699294393
+                      20   72786012927793961715        71916937400532750123
+
+             Table 1: Unlabeled chordal graph counts. Bold entries (n ≥ 16) are new.
+
+     The computation was validated four independent ways.
+    1. Known data. The Burnside sum reproduces all published values of both sequences for 1 ≤
+       n ≤ 15 exactly.
+    2. Direct enumeration. For every cycle type small enough to enumerate, fix(λ) and cfix(λ) from
+       the dynamic program agree exactly with a backtracking enumerator over orbit edge-classes
+       (which lays down all π-invariant edge-orbits and prunes on hereditary chordality). This was
+       checked across all orbit sizes 1 ≤ s ≤ 16, every single c-cycle, and many mixed and composite
+       types; a representative sample appears in Table 2.
+    3. Labeled limit. fix(1n ) reproduces the labeled chordal totals A058862(n) for 1 ≤ n ≤ 10.
+   4. Euler transform. Chordal graphs are closed under disjoint union, so the total count is the
+      Euler transform of the connected count; this identity holds for the computed values through
+      n = 20, so the two independently assembled sequences are mutually consistent at every new
+      term.
+For the two largest terms n = 19, 20, which lie beyond the reach of the backtracking oracle of (2),
+the validation rests on the method’s exact reproduction of all known data (1) and the labeled
+limit (3), together with the Euler cross-check (4), under which the all-count and connected-count
+sequences certify each other.
+
+
+                                                  9
+                                    λ      n    fix(λ)   cfix(λ)   brute
+                                     3
+                                    1       3       8         4     ✓
+                                    2 12    4      15         7     ✓
+                                    22      4      13         7     ✓
+                                    3 12    5      15         7     ✓
+                                    321     6      26        11     ✓
+                                    32      6      22        15     ✓
+                                    4 12    6      22        10     ✓
+                                    421     7      69        37     ✓
+                                    42      8      64        37     ✓
+                                    63      9      37        23     ✓
+                                    33      9     897       745     ✓
+                                    84     12      92        52     ✓
+                                    93     12      34        22     ✓
+                                    10 5   15     113        95     ✓
+
+Table 2: Per-cycle-type values from the dynamic program, each agreeing exactly with direct back-
+tracking enumeration. The composite sizes 4, 6, 8, 9, 10 and the cross-divisor types (6 3, 8 4, 9 3,
+10 5) exercise the divisor-bundle recursion.
+
+
+   By Theorem 4 the method extends to larger n in sub-exponential time; the values above were
+obtained on a single processor.
+
+Data availability.     The two computed tables (n = 1, . . . , 20) have SHA-256 digests
+       A048192 (connected)    2933d6dd7c2fb4133032158c4a5230514762f762975734e9df598f106ef0ac94
+       A048193 (all)          95eda5ffd21902003b79624f16dd8fae021e4a00dfd3f78e7611e95824f95abb
+
+
+8    Conclusion
+We have given a concrete equivariant dynamic program for counting permutation-invariant chordal
+graphs, built on the labeled evaporation program of [1]. Its correctness rests on a divisor-bundle
+decomposition (Theorem 1) that reduces each equivariant recurrence to its labeled counterpart, and
+the full Burnside computation runs in sub-exponential time (Theorem 4). The resulting enumer-
+ation extends the unlabeled chordal sequences A048192 and A048193 past their previous frontier.
+The orbit-bundle lifting strategy may be adaptable to other graph classes that admit a compatible
+labeled decomposition recurrence; we leave such extensions to future work.
+
+
+A     The explicit equivariant recurrences
+We collect the eight recurrences overQthe state
+                                               variables of Section 5.1. Vectors are indexed by the
+                              k            ki
+sizes S = (s1 < · · · < sr ); m := i mi ; p = p(k) is the largest index with kp > 0; and the
+marking coefficient is                                     
+                                                 kp − 1 Y ki
+                                   M (k, κ) =                     .
+                                                 κp − 1       κi
+                                                            i̸=p
+
+A bundle of period d absorbs only sizes divisible by d; we write κ ▷ d for “κi > 0 ⇒ d | si ,”
+and κ/d for the vector with si 7→ si /d. The boundary terms use the block generating functions
+                                                             ⟨N/d⟩
+Γd , Γcov of (4); [ Φ ]a is the coefficient of τ vτaτ , and g1
+                                              Q
+      d                                                            (t, a, ν) is the sub-world function with
+
+                                                    10
+block-boundary a. Define the three peeled-component operators (the d = 1 summand A and the
+d > 1 summands Bd , for the three boundary conditions Φ ∈ {see, not-all, cover}):
+                      X              
+           Asee (κ) =          x
+                              x′  −  z
+                                    x′    g1 (t, x′ , κ),
+                                    0̸=x′ ≤x
+                                     X                             
+           Anot-all (κ) =                          x
+                                                            − xz′        g1 (t, x′ , κ),
+                                                        
+                                                   x′
+                                    0̸=x′ ⪇x
+                                           X                           ⟨N/d⟩
+              Bdsee (κ) = d|κ|−1                        Γd (x) − Γd (z) a g1   (t, a, κ/d),
+                                               a
+                                           X                  ⟨N/d⟩
+             Bdcov (κ) = d|κ|−1                         Γcov
+                                                         d (x) a g1   (t, a, κ/d),
+                                               a
+                                           X                                    ⟨N/d⟩
+          Bdnot-all (κ) = d|κ|−1                        Γd (x) − Γcov
+                                                                  d (x) − Γd (z) a g1   (t, a, κ/d)   (0 if z = x).
+                                               a
+
+
+Base cases and invalid states. Every function returns 0 outside its domain and on impossible
+states: g1 = 0 if t ≤ 0 or k = 0; g(0, x, k, z) = [ k = 0 ] and g = 0 for t < 0; g̃(t, x, 0, z) = 1;
+ĝ(t, x, 0, z) = 1 and ĝ = 0 for t < 1; g2 = 0 if t ≤ 0 or k = 0; f = 0 for t ≤ 0, f (1, x, l, k) = [ k = 0 ],
+and f = 0 fork = 0, t ≥ 2; and f˜ = fˆ = 0 for t ≤ 1 or k = 0. Empty sums are 0 and empty
+products 1; ab = 0 for b > a or b < 0, so a sub-multiset that does not fit contributes nothing, as
+does any state withP a negative coordinate. A clique-number bound ω is carried with the recursion,
+and f = 0 once i si (xi + li ) > ω. The recursion is finite: t strictly decreases through f → g → g̃,
+and the world order N/d < N strictly decreases at each bundle step (Lemma 4). Then:
+                   X 
+                         k
+   g1 (t, x, k) =        ℓ f (t, x, ℓ, k − ℓ),                                                           (R1)
+                   0̸=ℓ≤k
+                   X
+                            k
+                                    f˜(t, x, l, m) g(t − 2, x + l, k − m, x),
+                                
+f (t, x, l, k) =            m                                                                                         (R2)
+                   m≤k
+                   X
+                            k
+                                
+g(t, x, k, z) =             m       g̃(t, x, m, z) g(t − 1, x, k − m, z),                                             (R3)
+                   m≤k
+                   X               h           X          i
+g̃(t, x, k, z) =           M (k, κ) Asee (κ) +   Bdsee (κ) g̃(t, x, k − κ, z),                                        (R4)
+                   κp ≥1                                      d>1, κ▷d
+                   X               h               X              i
+ĝ(t, x, k, z) =           M (k, κ) Anot-all (κ) +   Bdnot-all (κ) ĝ(t, x, k − κ, z),                                (R5)
+                   κp ≥1                                            d>1, κ▷d
+                   X               h                        X                     i
+ g2 (t, x, k) =            M (k, κ) g1 (t, x, κ) R(k − κ) +   Bdcov (κ) R0 (k − κ) ,                                  (R6)
+                   κp ≥1                                                          d>1, κ▷d
+
+f˜(t, x, l, k) = fˆ(t, x, l, k)
+                      X          h                                                                         i
+                 +             k
+                                    g1 (t−1, x+l, m) ˆ(t, x, l, k−m) + g2 (t−1, x+l, m) ĝ(t−1, x+l, k−m, x) .
+                                                     f
+                              m
+                     0̸=m≤k
+                                                                                                                      (R7)
+
+where in (R6) R(·)
+                 Q = g1 + g2 gcd(d,s
+                                  and R0 (m) = [ m = 0 ] + R(m). Finally the absorption recurrence:
+                                               σi
+with Γtou
+       d  (σ) =    i (1 + v τ i )       i) − 1    the “touched-orbit” generating function, the weight
+               x               z
+                                   l 
+w(xp, lp) = xp − [ lp=0 ] xp lp , and the successor nxlp (k ′ ) = ĝ(t−1, x+lp, k ′ , z) if lp = l and
+                 
+
+
+
+
+                                                                                 11
+fˆ(t, x+lp, z, l−lp, k ′ ) otherwise,
+                                     X                X
+                 fˆ(t, x, z, l, k) =   M (k, κ)              w(xp, lp) nxlp (k−κ) Θκ (xp+lp),       (R8)
+                                 κp ≥1          xp≤x, lp≤l
+                                                     ∈{0,(x,l)}
+                                              (xp,lp) /
+
+where the touched-component value, the absorption analogue of the bracket in (R4), is
+                                        X        X         ⟨N/d⟩
+              Θκ (σ) = g1 (t−1, σ, κ) +   d|κ|−1    Γtou
+                                                      d (σ) a g1    (t−1, a, κ/d).
+                                           d>1, κ▷d          a
+
+Setting all sizes to 1 (r = 1, N = 1, no d > 1) recovers the labeled recurrences of Theorem 2.
+
+
+B     A worked example: λ = 22
+Let π = (1 2)(3 4), so N = 2 and the only sizes are {2}. We compute fix(22 ) from Proposition 2
+and Lemma 2, displaying the divisor-bundle terms.
+   A single component-bundle on j of the 2-cycles has, by Theorem 1,
+
+              BUNDLE(2j ) = cfix(2j ) + 2 j−1 cfix⟨1⟩ (1j ),          cfix⟨1⟩ (1j ) = A007134(j),
+                            | {z } |           {z        }
+                                    d=1               d=2
+
+the d = 2 term being a swapped pair of labeled components. With cfix(21 ) = 1, cfix(22 ) = 7 and
+A007134(1) = A007134(2) = 1,
+
+                   BUNDLE(21 ) = 1 + 20 ·1 = 2,              BUNDLE(22 ) = 7 + 21 ·1 = 9.
+
+Proposition 2 with k = (2) (marked size 2) gives, over µ ∈ {(1), (2)},
+                                                      
+                      2     1              1       1     1
+                 fix(2 ) =    BUNDLE(2 ) fix(2 ) +          BUNDLE(22 ) fix(∅).
+                            0                            1
+
+Here fix(21 ) = BUNDLE(21 ) = 2 and fix(∅) = 1, so
+
+                                      fix(22 ) = 1 · 2 · 2 + 1 · 9 · 1 = 13,
+
+matching the direct enumeration in Table 2. The contributions 20 · 1 and 21 · 1 are exactly the
+period-2 bundles (an edge between the two cyclically-paired vertices, in its 2 j−1 alignments), which
+the d = 1 count alone would miss.
+
+
+References
+[1] U. Hébert-Johnson, D. Lokshtanov, E. Vigoda. Counting and Sampling Labeled Chordal Graphs
+    in Polynomial Time. arXiv:2308.09703, 2023.
+
+[2] U. Hébert-Johnson, D. Lokshtanov. Sampling Unlabeled Chordal Graphs in Expected Polynomial
+    Time. STACS 2025; arXiv:2501.05024.
+
+
+
+
+                                                        12
+

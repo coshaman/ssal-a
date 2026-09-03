@@ -1,0 +1,18 @@
+{
+  "status": "instrumented",
+  "n": 8,
+  "omega": 8,
+  "result_mod_p": 30888596,
+  "block_creations": 406,
+  "block_hits": 722,
+  "scope": "single transformed f_tilde_p outer block",
+  "backend": "F_998244353",
+  "verified_test": "tests/test_fast_block.py",
+  "formula": "K*M(s) + s*M(K)",
+  "notes": [
+    "K+1 D_j polynomials are multiplied by (1+U)^x",
+    "one length-K EGF product is accumulated for each r",
+    "the run creates 406 distinct blocks and serves 722 later queries from cached block vectors",
+    "global state counts and non-f_tilde_p counters are not a proof of the asymptotic theorem"
+  ]
+}

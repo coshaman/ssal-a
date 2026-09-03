@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: "Faster Exact Counting of Labeled Chordal Graphs via Formal Power Series"
+message: "If you use this software or result, please cite the paper."
+type: software
+authors:
+  - family-names: Park
+    given-names: Seonghyeon
+    affiliation: "Department of Computer Science and Engineering, Seoul National University"
+    address: "Seoul, Republic of Korea"
+repository-code: "https://github.com/coshaman/ssal-a"
+license: MIT
+version: 0.1.0
+date-released: 2026-09-03

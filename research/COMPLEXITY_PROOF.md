@@ -1,0 +1,9 @@
+# Complexity Proof — authoritative counting-only status
+
+The closed claim is an algebraic modular bound for the blockwise fast implementation. For a fixed block `(t,x,ell,z)`, let `s=x+ell` and `K=n-s`. The all-`k` block solve costs `O(K M(s) + s M(K))`, where `M(d)` is degree-`d` polynomial multiplication over the working field. The first term covers the `D_j(U)(1+U)^x` products; the second covers formation of `P`, the direct sum `Q=sum_r R_r B_r`, and the truncated integrating-factor/FPS operations. The vector is cached under `(t,x,z,ell,omega)`, so later requests for another `k` do not repeat polynomial work.
+
+For fixed `s`, the choices of `(x,ell,z)` are `O(s^2)`, and there are at most `n` evaporation-time values. Thus `sum_s O(n s^2 ((n-s)M(s)+sM(n-s))) = O(n^5 M(n))` under monotone `M` and `M(d)=Omega(d)`. The remaining memoized source families have coarse costs `O(n^6)` for the `g` family, `O(n^4)` for one-/multi-component boundary families, `O(n^5)` for remaining `f` terms, and `O(n^3)` for connected/all-graph recurrences. These are absorbed by the displayed bound when `M(n)=Omega(n)`.
+
+The claim is therefore `O(n^5 M(n))` field operations for one prime `p>n`, with standard truncated-FPS algorithms and the stated regularity assumptions. Exact integer recovery is a separate CRT repetition and is rigorous once the product of pairwise-coprime primes exceeds the graph-count bound. No unconditional bit/RAM bound is claimed; the conditional bit route is documented separately. The sampler is deliberately outside the counting-only theorem.
+
+The implementation-level charge is recorded in the manuscript's Complexity section and its Auxiliary Recurrence Ledger. The release status is `ALGEBRAIC_BOUND_CLOSED_WITH_EXPLICIT_ASSUMPTIONS`: exact integer/RAM complexity and sampler preservation remain separate qualifications.

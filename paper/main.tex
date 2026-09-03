@@ -1,0 +1,181 @@
+\documentclass[10pt]{article}
+\usepackage{amsmath,amssymb,amsthm,booktabs,hyperref,lineno}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newcommand{\F}{\mathbb F}
+\newcommand{\tildeO}{\widetilde O}
+\title{Faster Exact Counting of Labeled Chordal Graphs via Formal Power Series}
+\author{Seonghyeon Park\\Department of Computer Science and Engineering\\Seoul National University\\Seoul, Republic of Korea}
+\date{}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We give a counting-only acceleration of the dynamic program of Hébert-Johnson, Lokshtanov, and Vigoda for labeled chordal graphs. The existing analysis uses $O(n^7)$ arithmetic operations. We isolate its five-argument $\widetilde f_p$ recurrence, retain the previously known regrouping by $r=x'+\ell'$, and expose an additional coefficient-extraction convolution. After an exponential-generating-function normalization in the remaining parameter, the self-reference becomes a first-order linear formal differential equation. Solving each $(t,x,\ell,z)$ block with truncated formal-power-series operations gives $O(n^5M(n))$ field operations, where $M(d)$ is the cost of multiplying degree-$d$ polynomials. A separate CRT corollary gives exact integer recovery from sufficiently many primes. We distinguish field-operation complexity from bit complexity and report independent recurrence, brute-force, modular, CRT, and implementation checks.
+\end{abstract}
+
+\linenumbers
+\section{Introduction}
+Chordal graphs are graphs with no induced cycle of length at least four. Counting labeled chordal graphs is a natural test case for exact graph enumeration because perfect-elimination structure gives strong recursive descriptions while the labeled state space remains nontrivial. Hébert-Johnson, Lokshtanov, and Vigoda (HLV) gave the first polynomial-time exact counter for labeled chordal graphs and, more generally, for $\omega$-colorable labeled chordal graphs, with an $O(n^7)$ arithmetic-operation analysis \cite{hlv}.
+
+This paper improves the arithmetic-operation bound for the dominant recurrence. The contribution is not the HLV dynamic program, the regrouping $r=x'+\ell'$, generic polynomial multiplication, or generic formal-power-series (FPS) routines. The new step is to recognize that the regrouped recurrence contains both a polynomial coefficient-extraction convolution and a binomial-convolution self-reference. Under an exponential-generating-function normalization, the latter is a linear formal ODE and can be solved blockwise using standard FPS algorithms \cite{brentkung}.
+
+Our exact theorem is deliberately stated in two parts. The first concerns one execution over a suitable finite field. The second uses independent modular executions and CRT to recover the integer answer. We do not claim an unconditional improved bit or RAM bound, and we do not use the sampler from HLV.
+
+\section{The Counting Problem and the HLV Recurrence}
+Let $C(n,\omega)$ denote the number of labeled chordal graphs on vertex set $[n]$ with clique number at most $\omega$. Since chordal graphs are perfect, this is equivalently the number of $\omega$-colorable labeled chordal graphs. The unrestricted count is $C(n,n)$.
+
+We give the exact state vocabulary needed here. For a clique exception set $X=[x]$, $\widetilde g_1(t,x,k)$ counts graphs whose outside has exactly one component seeing all of $X$. The functions $\widetilde g(t,x,k,z)$ and $\widetilde g_p(t,x,k,z)$ impose, respectively, a neighbor in $X\setminus[z]$ for every outside component, or that no outside component sees all of $X$. The state $\widetilde f_p(t,x,\ell,k,z)$ counts connected graphs with exception set $X=[x]$, leaf gate $L=[x+1,x+\ell]$, $X\cup L$ a clique, all components outside it evaporating at time $t-1$, none seeing all of $X\cup L$, and each having a neighbor in $(X\cup L)\setminus[z]$. Its domain is $t\ge2$, $x\ge0$, $\ell\ge1$, $z\le x$, and $k\ge0$.
+
+The remaining HLV states are $g,g_1,g_{\ge2},f,\widetilde f$ and their boundary variants, distinguished only by evaporation time, connected-component count, and whether components see all of the boundary. The source extracts connected counts as $c(n)=\sum_t\widetilde g_1(t,0,n)$ and all counts as $a(n)=\sum_{k=1}^n\binom{n-1}{k-1}c(k)a(n-k)$ with $a(0)=1$.
+
+The base cases used by the source are $g(0,x,0,z)=1$ and $g(0,x,k,z)=0$ for $k>0$; $\widetilde g(t,x,0,z)=\widetilde g_p(t,x,0,z)=1$; $\widetilde g_1$ and $\widetilde g_{\ge2}$ vanish when $t=0$ or $k=0$; $f$ vanishes when $x+\ell>\omega$, $t=0$, or (for $t\ge2$) $k=0$, while $f(1,x,\ell,k)$ is one exactly when $k=0$ and $x+\ell\le\omega$; and $\widetilde f_p$ vanishes when $t=1$ or $k=0$. These conditions define the zero entries used in the block induction.
+
+For the state being accelerated, the exact source recurrence is
+\[
+F_k=\sum_{q=1}^k\binom{k-1}{q-1}\sum_{u=0}^{x}\sum_{i=0}^{\ell}\!{}'\binom{\ell}{i}G_{u+i,q}W(u,i)T_i(k-q),
+\]
+where $F_k=\widetilde f_p(t,x,\ell,k,z)$, $G_{r,q}=\widetilde g_1(t-1,r,q)$, the prime means $0<u+i<x+\ell$, and
+\[
+W(u,i)=\begin{cases}\binom{x}{u},&i>0,\\\binom{x}{u}-\binom{z}{u},&i=0,\end{cases}\quad
+T_i(j)=\begin{cases}\widetilde f_p(t,x+i,\ell-i,j,z),&i<\ell,\\\widetilde g_p(t-1,x+\ell,j,z),&i=\ell.\end{cases}
+\]
+Thus $i=0$ is the self-reference, $0<i<\ell$ strictly reduces $\ell$, and $i=\ell$ is a boundary call. The proper-subset condition gives $r=u+i\le x+\ell-1$.
+
+\section{The Additional Convolution}
+Fix $(t,x,\ell,z)$ and put $K=n-x-\ell$. For $j\ge0$, write $F_j=\widetilde f_p(t,x,\ell,j,z)$. After the known regrouping by $r=u+i$, the recurrence has the form
+\[
+ F_k=\sum_{q=1}^k\binom{k-1}{q-1}\sum_{r=1}^{x+\ell-1}G_{r,q}H_{r,k-q},
+\]
+where $G_{r,q}=\widetilde g_1(t-1,r,q)$ and $H_{r,j}$ denotes the inner $(u,i)$ sum only as an algebraic abbreviation. The implementation does not materialize a dense two-index table $H$: it computes the known forcing directly as a sum of univariate products below. Splitting off $i=0$ gives
+\[
+ H_{r,j}=a_rF_j+b_r(j),\qquad a_r=\binom{x}{r}-\binom{z}{r}.
+\]
+The remaining polynomial is
+\[
+D_j(U)=\sum_{i=1}^{\ell-1}\binom{\ell}{i}F^{(i)}_jU^i+G_jU^\ell,
+\]
+where $F^{(i)}_j$ is the already computed smaller-$\ell$ state and $G_j$ is the endpoint boundary value. Then $b_r(j)$ is the coefficient of $U^r$ in $D_j(U)(1+U)^x$. Explicitly, for fixed $r$, the coefficient receives the terms with $i\in[\max(1,r-x),\min(r,\ell-1)]$, weighted by $\binom{\ell}{i}\binom{x}{r-i}$, together with the endpoint term when $r\ge\ell$, weighted by $G_j\binom{x}{r-\ell}$. These are exactly the cases $u=r-i$ in the source sum; the excluded $i=0$ case is the self-reference, and the proper-subset condition removes $r=x+\ell$.
+
+Thus the $a_rF_j$ terms form a binomial convolution in $q$ and $j$, while all $b_r(j)$ terms are known forcing terms within the block.
+
+\section{EGF and Formal ODE}
+Define
+\[
+R_r(Y)=\sum_{q=1}^{K}G_{r,q}\frac{Y^{q-1}}{(q-1)!},\qquad B_r(Y)=\sum_{j=0}^{K}b_r(j)\frac{Y^j}{j!},
+\]
+and form the forcing series directly as
+\[
+Q(Y)=\sum_{r=1}^{s-1}R_r(Y)B_r(Y).
+\]
+This is a sum of $s-1$ univariate products; it is not a dense two-dimensional matrix contraction. Also put $A_q=\sum_ra_rG_{r,q}$ and define
+\[
+P(Y)=\sum_{q=1}^{K}A_q\frac{Y^{q-1}}{(q-1)!}.
+\]
+With $F(Y)=\sum_{k=1}^{K}F_kY^k/k!$ and $F_0=0$, coefficient extraction yields
+\[
+F'(Y)=P(Y)F(Y)+Q(Y),\qquad F(0)=0.
+\]
+The unique formal solution is
+\[
+F(Y)=E(Y)\int_0^Y E(V)^{-1}Q(V)\,dV,
+\qquad E(Y)=\exp\!\left(\int_0^YP(V)\,dV\right).
+\]
+All series are truncated at degree $K$. The strict decrease of $\ell$ in the interior terms makes the block evaluation acyclic in ascending $\ell$; the endpoint is a previously available $\widetilde g_p$ value. Formal uniqueness follows coefficient by coefficient: once $F_0,\ldots,F_m$ are known, the coefficient of $Y^m$ on the right determines $F_{m+1}$, because $P$ has no constant-term contribution from an unknown $F_{m+1}$ and $Q$ is already known. Equivalently, the integrating factor has constant term $1$ and is invertible in the truncated power-series ring.
+
+For the coefficient check, the coefficient of $Y^{k-1}$ in $P(Y)F(Y)$ is
+\[
+\sum_{q=1}^{k}\frac{A_q}{(q-1)!}\frac{F_{k-q}}{(k-q)!}.
+\]
+Multiplication by $(k-1)!$ gives $\sum_q\binom{k-1}{q-1}A_qF_{k-q}$, exactly the homogeneous part of the recurrence. Similarly, the coefficient of $Y^{k-1}$ in $R_rB_r$ gives $G_{r,q}b_r(k-q)/((q-1)!(k-q)!)$, and multiplication by $(k-1)!$ gives the forcing term. This proves why $(q-1)!$, rather than $q!$, is required.
+
+\section{Complexity}
+For a fixed block, the $K+1$ products $D_j(U)(1+U)^x$ cost $O(KM(s))$. Forming $P$ costs $O(sK)$ scalar operations, while $Q=\sum_rR_rB_r$ costs $O(sM(K))$. The integrating-factor inverse, exponential, integrations, and multiplications cost $O(M(K))$ up to logarithmic factors. Hence the block costs $O(KM(s)+sM(K))$. The block returns the entire vector $F_0,\ldots,F_K$ in one solve.
+
+For fixed $s$, there are $O(s^2)$ choices of $(x,\ell,z)$ after summing over $z\le x$, and $O(n)$ choices of $t$. Since $K=n-s$, summing the block cost gives
+\[
+ \sum_{s=1}^n O\!\left(n s^2\big((n-s)M(s)+sM(n-s)\big)\right)
+ =O(n^5M(n))
+\]
+when $M$ is monotone up to constant factors and $M(d)=\Omega(d)$. The remaining HLV families contribute, under their memoized valid domains, $O(n^6)$ for the $g$-family, $O(n^4)$ for the one-/multi-component boundary families, $O(n^5)$ for the remaining $f$ terms, and at most $O(n^5)$ for repeated connected-count extraction in the all-graph recurrence. Each is absorbed by the displayed block sum. A block is keyed by the active $(n,p)$ scope together with $(t,x,z,\ell,\omega)$; its vector is created at most once and all later $k$ requests are table lookups.
+
+\begin{theorem}[Modular counting]
+For $1\le\omega\le n$ and a finite field of characteristic greater than $n$, one execution of the abstract blockwise algorithm computes $C(n,\omega)$ using $O(n^5M_p(n))$ field operations, where $M_p(d)$ dominates degree-$d$ multiplication and every truncated-FPS primitive used by the integrating-factor solver, including logarithmic overhead. The supplied NTT implementation realizes this theorem for admissible NTT primes and transform lengths; it rejects unsupported lengths rather than silently applying an invalid transform.
+\end{theorem}
+
+\begin{proof}
+The recurrence identities are integer identities. Since $p>n$, every factorial denominator through the truncation degree is invertible, so the EGF normalization, ODE solution, and coefficient extraction are valid in $\F_p$. The block dependency order proves correctness by induction on $\ell$ and the outer HLV order. The preceding sum charges the operations.
+\end{proof}
+
+\section{Correctness and Evaluation Order}
+Fix $(n,\omega,p)$ for one modular execution. At time $t$, evaluate the $\widetilde f_p$ blocks in increasing $\ell$, then the remaining $\widetilde f$, $f$, $\widetilde g_1$, $\widetilde g_{\ge2}$, boundary, $g$, and connected/all-graph families. Zero and boundary cases are returned before recursive calls. Every interior $\widetilde f_p$ edge has target leaf parameter $\ell-i<\ell$; its $i=\ell$ edge and all other boundary edges decrease $t$. The remaining same-layer recurrences decrease $k$ in their recursive argument, and the outer all-graph recurrence decreases the vertex budget. The complete family-by-family edge list and domains are given in the accompanying dependency proof.
+
+The only same-state reference is the $i=0$ term of $\widetilde f_p$. It is solved by the formal ODE, not by recursion, and the coefficient recurrence determines $F_{m+1}$ from coefficients through $F_m$. Induction over this block order and then the outer HLV order proves that the block solver preserves every source recurrence value. The cache is cleared for each fixed $(n,p,\omega)$ execution; within that scope the key $(t,x,z,\ell,\omega)$ determines $K=n-x-\ell$ and stores the full vector $F_0,\ldots,F_K$. Later requests for another $k$ are lookups only.
+
+\section{Exact Integer Recovery}
+There are at most $2^{\binom n2}$ simple labeled graphs, hence
+\[
+0\le C(n,\omega)\le B:=2^{\binom n2}.
+\]
+Choose pairwise-coprime admissible primes $p_i>n$ whose product $P$ exceeds $B$. Run the modular theorem for every $p_i$ and reconstruct the unique residue in $[0,P)$ by canonical nonnegative CRT. Since the desired answer lies in $[0,B]$ and $P>B$, it is the unique nonnegative integer in the allowed interval; the implementation uses this one-sided reconstruction. Intermediate DP values need not be reconstructed: modular reduction of the integer recurrence computes the reduction of the final integer value.
+
+\begin{corollary}[Exact counting]
+The modular theorem together with sufficiently many primes $p_i>n$ gives exact integer recovery of $C(n,\omega)$ by CRT.
+\end{corollary}
+
+This corollary is an exactness statement, not a claim that CRT has the cost of one modular execution. The abstract theorem allows any suitable fast multiplication backend; the supplied reference implementation uses NTT-friendly primes and validates each required transform length. We leave the $\tilde O(n^8)$ bit-cost route conditional on the detailed arithmetic assumptions described in the supplement.
+
+\section{Implementation and Validation}
+We implemented three independent layers: a literal reference recurrence, a transformed-naive recurrence, and a modular transformed-fast recurrence with NTT/FPS primitives. The test suite includes randomized identity checks, ODE coefficient checks, block comparisons, CRT reconstruction, mutation checks, a block-cache regression, and brute-force chordality enumeration.
+
+The verification package provides the literal and transformed implementations used for the checks below. Our independent suite contains 34 tests, and the separate mutation suite contains 10 tests. The unrestricted values for $n=1,\ldots,9$ begin
+\[
+1,2,8,61,822,18154,617675,30888596,2192816760,
+\]
+and agree with the published sequence A058862 \cite{oeis}. Brute-force simplicial-elimination checks agree through six vertices. An instrumented $n=8,\omega=8$ run created 406 distinct blocks and served 722 later queries from cached block vectors.
+
+The canonical entry point is \texttt{python scripts/verify\_all.py}; it runs both test suites, Python compilation, and certificate generation. The certificate records the block key, creation count, hit count, and truncation parameters. The auxiliary recurrence ledger and the theorem above specify the field-level assumptions under which the FPS replacement is valid.
+
+\section{Related Work and Limitations}
+The HLV paper is the source of the recurrence and the $O(n^7)$ arithmetic bound \cite{hlv}. The 2025 dissertation records the $r=x'+\ell'$ regrouping and six-argument helper, so those steps are prior art \cite{dissertation}. The present contribution begins with the additional coefficient-extraction and EGF/ODE reduction. Sun's 2026 work uses the labeled HLV recurrence as a base case for an equivariant/unlabeled divisor-bundle computation; its available paper and README do not state this acceleration \cite{sun}.
+
+Our theorem is not an unconditional bit-complexity improvement. The exact CRT route is rigorous, but the cost of arbitrary-field multiplication, prime generation, and every auxiliary table is not reduced here to a fully implementation-level RAM theorem. Priority is stated conservatively: to the best of our knowledge, no inspected source states the additional EGF/FPS acceleration, but the unavailable source history and lack of author responses prevent an absolute priority claim.
+
+\section{Auxiliary Recurrence Ledger}
+For reference, the auxiliary calls used by the top-down HLV program are listed here; this makes the global cost claim checkable without consulting implementation code. With binomial coefficients interpreted as zero outside their natural ranges,
+\[
+\widetilde g_1(t,x,k)=\sum_{\ell=1}^{k}\binom{k}{\ell}f(t,x,\ell,k-\ell),
+\]
+\[
+f(t,x,\ell,k)=\sum_{q=1}^{k}\binom{k}{q}\widetilde f(t,x,\ell,q)g(t-2,x+\ell,k-q,x),
+\]
+\[
+g(t,x,k,z)=\sum_{q=0}^{k}\binom{k}{q}\widetilde g(t,x,q,z)g(t-1,x,k-q,z),
+\]
+\[
+\widetilde g(t,x,k,z)=\sum_{q=1}^{k}\sum_{u=1}^{x}\left(\binom{x}{u}-\binom{z}{u}\right)\binom{k-1}{q-1}\widetilde g_1(t,u,q)\widetilde g(t,x,k-q,z),
+\]
+\[
+\widetilde f(t,x,\ell,k)=\widetilde f_p(t,x,\ell,k)+\sum_{q=1}^{k}\binom{k}{q}\widetilde g_1(t-1,x+\ell,q)\widetilde f_p(t,x,\ell,k-q)
+\]
+\[
+\qquad+\sum_{q=1}^{k}\binom{k}{q}\widetilde g_{\ge2}(t-1,x+\ell,q)\widetilde g_p(t-1,x+\ell,k-q,x),
+\]
+\[
+\widetilde g_{\ge2}(t,x,k)=\sum_{q=1}^{k-1}\binom{k-1}{q-1}\widetilde g_1(t,x,q)\bigl(\widetilde g_1(t,x,k-q)+\widetilde g_{\ge2}(t,x,k-q)\bigr),
+\]
+\[
+\widetilde g_p(t,x,k,z)=\sum_{q=1}^{k}\sum_{u=1}^{x-1}\left(\binom{x}{u}-\binom{z}{u}\right)\binom{k-1}{q-1}\widetilde g_1(t,u,q)\widetilde g_p(t,x,k-q,z),
+\]
+and $\widetilde f_p(t,x,\ell,k)=\widetilde f_p(t,x,\ell,k,x)$. These recurrences, together with the base cases above, define the complete arithmetic program. The displayed $\widetilde f_p$ identity in Section 3 is the only one replaced by the FPS block solver.
+
+The block implementation first materializes the lower-$\ell$ vectors, boundary vector, and all $G_{r,q}$ values; it then forms the $D_j(1+U)^x$ products, the $R_rB_r$ products, and the integrating-factor solution. A cache lookup keyed by the active $(n,p)$ scope together with $(t,x,z,\ell,\omega)$ returns the stored vector entry for any subsequent $k$. Thus no caller can re-run polynomial work for a different $k$.
+
+\section{Conclusion}
+The HLV labeled chordal-graph counter has a block structure that supports a further algebraic acceleration. The resulting exact counting theorem separates modular field operations from CRT recovery and provides a clean counting-only response to the faster-exact-counting direction. The main remaining opportunities are a complete implementation-level bit analysis and broader independent priority confirmation.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

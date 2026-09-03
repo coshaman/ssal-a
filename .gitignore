@@ -1,0 +1,11 @@
+.pytest_cache/
+**/__pycache__/
+tmp/
+manuscript/.pdf-render-*/
+manuscript/main.aux
+manuscript/main.bbl
+manuscript/main.blg
+manuscript/main.log
+manuscript/main.out
+manuscript/main.synctex.gz
+manuscript/main.toc
